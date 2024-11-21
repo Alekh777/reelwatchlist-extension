@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Movie Tracker</h1>
+        <div class="theme-switch">
+            <label for="theme-toggle">🌙</label>
+            <input type="checkbox" id="theme-toggle" />
+            <label for="theme-toggle">☀️</label>
+        </div>
+        <input type="text" id="search" placeholder="Search for movies..." />
+        <button id="searchBtn">Search</button>
+        <div id="results"></div>
+        <div id="watchlist">
+            <h2>Your Watchlist</h2>
+            <ul id="watchlistItems"></ul>
+        </div>
+    </div>
+    <script src="theme.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
