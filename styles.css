@@ -1,69 +1,178 @@
-body {
-    font-family: Arial, sans-serif;
+:root {
+    --primary: #ff4d4d;
+    --primary-dark: #ff3333;
+    --bg-dark: #0a0a0a;
+    --bg-light: #1e1e1e;
+    --text-light: #ffffff;
+    --text-gray: #cccccc;
+}
+
+* {
     margin: 0;
-    padding: 20px;
-    background-color: var(--background);
-    color: var(--text-color);
-    transition: background-color 0.3s, color 0.3s;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+    width: 360px;
+    min-height: 550px;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
 }
 
 .container {
-    width: 300px;
-    /* max-width: 300px; */
-    margin: auto;
+    padding: 16px;
 }
 
-h1, h2 {
+h1 {
+    font-size: 20px;
+    margin-bottom: 20px;
     text-align: center;
 }
 
+#searchContainer {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
 input[type="text"] {
-    width: calc(100% - 22px);
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    flex: 1;
+    background-color: var(--bg-light);
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+input[type="text"]:focus {
+    outline: 1px solid var(--primary);
 }
 
 button {
-    width: 100%;
-    padding: 10px;
-    background-color: #007bff;
+    background: var(--primary);
     border: none;
-    border-radius: 5px;
-    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: var(--text-light);
     cursor: pointer;
+    transition: background 0.2s;
 }
 
 button:hover {
-    background-color: #0056b3;
+    background: var(--primary-dark);
 }
 
 #results {
-    margin-top: 10px;
-}
-
-.theme-switch {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.theme-switch label {
-    margin: 0 5px;
+    margin-bottom: 20px;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 #watchlist {
-    margin-top: 20px;
+    padding: 16px;
+    background: var(--bg-light);
+    border-radius: 8px;
+    margin-bottom: 16px;
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
+#watchlist h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text-gray);
 }
 
-li {
-    padding: 5px;
-    border-bottom: 1px solid #ccc;
+#loginContainer {
+    height: 300px;
+    width: 100%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    left: 50%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    text-align: center;
+}
+
+#loginContainer p {
+    font-size: 14px;
+}
+
+#loginContainer h2 {
+    font-size: 22px;
+}
+
+#loginContainer button {
+    padding: 12px 18px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#loginButton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#userInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-light);
+    border-radius: 8px 8px 0 0;
+    position: absolute;
+    bottom: 0;
+}
+
+#userInfo>div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#userInfo>div p {
+    margin: 0 5px;
+}
+
+.profile-img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--primary);
+}
+
+#userInfo button {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 6px 12px;
+}
+
+#userInfo button:hover {
+    background: var(--primary);
+    color: var(--text-light);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bg-light);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }

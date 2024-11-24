@@ -1,28 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Tracker</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
-        <h1>Movie Tracker</h1>
-        <div class="theme-switch">
-            <label for="theme-toggle">🌙</label>
-            <input type="checkbox" id="theme-toggle" />
-            <label for="theme-toggle">☀️</label>
+        <div id="inner-container">
+            <h1>Reel Watchlist</h1>
+    
+            <div id="searchContainer">
+                <input id="search" type="text" placeholder="Search for movies...">
+                <button id="searchBtn">Search</button>
+            </div>
+    
+            <div id="results">
+                <!-- Search results will appear here -->
+            </div>
+    
+            <div id="watchlist">
+                <h2>Your Watchlist</h2>
+                <ul id="watchlistItems"></ul>
+            </div>
         </div>
-        <input type="text" id="search" placeholder="Search for movies..." />
-        <button id="searchBtn">Search</button>
-        <div id="results"></div>
-        <div id="watchlist">
-            <h2>Your Watchlist</h2>
-            <ul id="watchlistItems"></ul>
+
+        <div id="loginContainer">
+            <h2>Welcome to Reel Watchlist</h2>
+            <p>Sign in to manage your watchlist</p>
+            <button id="loginButton">Sign in with Google</button>
         </div>
+
     </div>
-    <script src="theme.js"></script>
+
+    <div id="userInfo">
+        <div>
+            <img id="profileImage" class="profile-img" src="" alt="Profile">
+            <div>
+                <p id="userName"></p>
+                <p id="userEmail"></p>
+            </div>
+        </div>
+        <button id="logoutButton">Sign Out</button>
+    </div>
+
+
     <script src="popup.js"></script>
 </body>
+
 </html>

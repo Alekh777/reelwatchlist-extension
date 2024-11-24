@@ -3,9 +3,18 @@
   "name": "Reel Watchlist",
   "version": "1.0",
   "description": "A movie tracker watchlist",
-  "permissions": ["storage", "activeTab", "webRequest"],
+  "permissions": ["storage", "activeTab", "webRequest", "identity", "cookies"],
+  "oauth2": {
+    "client_id": "560576158141-lbk1674i8fs6matjg4vi8cik941h6hj1.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ]
+  },
   "host_permissions": [
-    "https://www.google.com/search*"
+    "https://www.google.com/search*",
+    "http://localhost:4000/*",
+    "https://reelwatchlist-backend.alekhkr.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
