@@ -16,9 +16,15 @@
 
 body {
     width: 360px;
-    min-height: 550px;
+    min-height: 560px;
     background-color: var(--bg-dark);
     color: var(--text-light);
+}
+
+html, body {
+    overflow: overlay; /* Scrollbar overlays content */
+    scrollbar-width: thin; /* For Firefox: Make the scrollbar less intrusive */
+    scrollbar-color: rgba(220, 220, 220, 0.6) transparent; /* Custom scrollbar color for Firefox */
 }
 
 .container {
@@ -34,7 +40,7 @@ h1 {
 #searchContainer {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 input[type="text"] {
@@ -82,6 +88,19 @@ button:hover {
     font-size: 16px;
     margin-bottom: 12px;
     color: var(--text-gray);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#watchlistItems {
+    height: 310px;
+    max-height: 310px;
+    width: 100%;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 #loginContainer {
@@ -159,20 +178,38 @@ button:hover {
     color: var(--text-light);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
+.watchlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-::-webkit-scrollbar-track {
-    background: var(--bg-dark);
+.watchlist-header h2 {
+    margin: 0 !important;
+}
+
+.watchlist-header input {
+    padding: 6px 10px;
+    width: 164px;
+    background-color: var(--bg-dark);
+    flex: none;
+    font-size: 12px;
+}
+
+::-webkit-scrollbar {
+    width: 6px; /* Adjust width of the scrollbar */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--bg-light);
-    border-radius: 3px;
+    background: rgba(235, 235, 235, 0.6); /* Dark translucent scrollbar */
+    border-radius: 4px; /* Rounded corners */
+}
+
+::-webkit-scrollbar-track {
+    background: transparent; /* Make track invisible */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
+    background: rgba(229, 229, 229, 0.8); /* Darker on hover */
 }

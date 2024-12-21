@@ -1,6 +1,7 @@
 // Constants and Configuration
 const CONTENT_CONFIG = {
     SPOTLIGHT_LINKS: ['imdb.com/title/', 'primevideo.com', 'netflix.com'],
+    isDevelopment: true,
     SELECTORS: {
         MOVIE_TITLE: '.PZPZlf.ssJ7i',
         RELEASE_YEAR: '.nwVKo',
@@ -182,12 +183,90 @@ const CONTENT_CONFIG = {
                 alignItems: 'center',
                 transform: 'scale(0)',
                 animation: 'popIn 0.3s ease-out forwards',
+                position: 'relative',
+            },
+            small: {
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#ff4d4d',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transform: 'scale(0)',
+                animation: 'popIn 0.3s ease-out forwards',
+                position: 'relative',
             }
         },
         checkmarkIcon: {
             base: {
                 width: '25px',
                 height: '25px'
+            },
+            small: {
+                width: '15px',
+                height: '15px'
+            }
+        },
+        tooltip: {
+            base: {
+                visibility: 'hidden',
+                position: 'absolute',
+                width: '110px',
+                bottom: '120%',
+                right: '0',
+                fontSize: '12px',
+                backgroundColor: '#1e1e1e',
+                color: '#ffffff',
+                border: '1px solid #333',
+                textAlign: 'center',
+                borderRadius: '6px',
+                padding: '5px 10px',
+                zIndex: '1',
+                opacity: '0',
+                transition: 'opacity 0.3s, visibility 0.3s',
+            },
+            hover: {
+                visibility: 'visible',
+                opacity: '1'
+            },
+            mouseLeave: {
+                visibility: 'hidden',
+                opacity: '0'
+            }
+        },
+        cross: {
+            base: {
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                backgroundColor: '#ff4d4d',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transform: 'scale(0)',
+                animation: 'popIn 0.3s ease-out forwards',
+            },
+            small: {
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#ff4d4d',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transform: 'scale(0)',
+                animation: 'popIn 0.3s ease-out forwards',
+            }
+        },
+        crossIcon: {
+            base: {
+                width: '25px',
+                height: '25px'
+            },
+            small: {
+                width: '15px',
+                height: '15px'
             }
         },
         successText: {
@@ -240,10 +319,17 @@ const CONTENT_CONFIG = {
                     marginTop: 'auto',
                     backgroundColor: '#ff4d4d',
                     color: '#ffffff',
-                    padding: '2px 8px',
+                    padding: '6px 8px',
                     borderRadius: '4px',
                     fontSize: '11px',
                     alignSelf: 'flex-start'
+                }
+            },
+            typeAndCheckMarkContainer: {
+                base: {
+                    marginTop: 'auto',
+                    display: 'flex',
+                    justifyContent: 'space-between',
                 }
             },
         },
@@ -386,29 +472,50 @@ class ContentApiService {
 
             return response.data;
         } catch (error) {
-            console.error('Fetch error:', error);
+            if (CONTENT_CONFIG.isDevelopment) {
+                console.error('Fetch error:', error);
+            }
+            WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
             throw error;
         }
     }
-    static async fetchMovieDetails(movieName, releaseYear, imdbId = null) {
-        const params = this.buildPostBody(movieName, releaseYear, imdbId);
-        const url = `search-movie?${new URLSearchParams(params)}`;
+    static async fetchMovieDetails(movieName, releaseYear, imdbID = null) {
+        const params = this.buildPostBody(movieName, releaseYear, imdbID);
+        const url = `omdb-search-movie?${new URLSearchParams(params)}`;
         try {
             const data = await this.fetchAuthenticated(url, 'GET');
             return data;
         } catch (error) {
-            console.error('Error fetching movie data:', error);
+            if (CONTENT_CONFIG.isDevelopment) {
+                console.error('Error fetching movie data:', error);
+            }
+            WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
             throw error;
         }
     }
 
-    static buildPostBody(movieName, releaseYear, imdbId) {
-        if (imdbId) {
-            return { imdbId };
+    static buildPostBody(movieName, releaseYear, imdbID) {
+        if (imdbID) {
+            return { imdbID };
         }
         return releaseYear 
             ? { q: movieName, releaseYear }
             : { q: movieName };
+    }
+
+    static async addToWatchlist(imdbID = null) {
+        const postBody = { imdbID };
+        const url = `add-to-watchlist`;
+        try {
+            const data = await this.fetchAuthenticated(url, 'POST', postBody);
+            return data;
+        } catch (error) {
+            if (CONTENT_CONFIG.isDevelopment) {
+                console.error('Error fetching movie data:', error);
+            }
+            WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
+            throw error;
+        }
     }
 
     static async mockApiCall(data, delay = 1000) {
@@ -429,6 +536,8 @@ class DropdownUI {
     static create(buttonElement, initialLoad = true) {
         this.removeExisting();
         const dropdown = this.createDropdownElement(buttonElement);
+
+        WatchlistManager.currentDropdown = dropdown;
         
         if (initialLoad) {
             dropdown.appendChild(LoadingUI.createLoader());
@@ -517,25 +626,58 @@ class LoadingUI {
         return loadingContainer;
     }
 
-    static showSuccessState(dropdown) {
-        const successContainer = document.createElement('div');
-        UIHelper.applyStyles(successContainer, CONTENT_CONFIG.STYLES.successContainer.base);
-        
+    static getSuccessCheckMark(shouldBeSmall, isAlreadyInWatchlist) {
         const checkmark = document.createElement('div');
-        UIHelper.applyStyles(checkmark, CONTENT_CONFIG.STYLES.checkmark.base);
+        UIHelper.applyStyles(checkmark, shouldBeSmall ? CONTENT_CONFIG.STYLES.checkmark.small : CONTENT_CONFIG.STYLES.checkmark.base);
         
         const checkmarkIcon = document.createElement('div');
-        UIHelper.applyStyles(checkmarkIcon, CONTENT_CONFIG.STYLES.checkmarkIcon.base);
+        UIHelper.applyStyles(checkmarkIcon, shouldBeSmall ? CONTENT_CONFIG.STYLES.checkmarkIcon.small : CONTENT_CONFIG.STYLES.checkmarkIcon.base);
         checkmarkIcon.innerHTML = `
             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
                 <path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
         checkmark.appendChild(checkmarkIcon);
+        if (isAlreadyInWatchlist) {
+            const tooltip = document.createElement('span');
+            tooltip.textContent = 'Already in Watchlist'
+            UIHelper.applyStyles(tooltip, CONTENT_CONFIG.STYLES.tooltip.base);
+            checkmark.addEventListener('mouseenter', () => {
+                UIHelper.applyStyles(tooltip, CONTENT_CONFIG.STYLES.tooltip.hover);
+            });
+            checkmark.addEventListener('mouseleave', () => {
+                UIHelper.applyStyles(tooltip, CONTENT_CONFIG.STYLES.tooltip.mouseLeave);
+            });
+            checkmark.appendChild(tooltip);
+        }
+        return checkmark;
+    }
+
+    static getErrorCross(shouldBeSmall) {
+        const cross = document.createElement('div');
+        UIHelper.applyStyles(cross, shouldBeSmall ? CONTENT_CONFIG.STYLES.cross.small : CONTENT_CONFIG.STYLES.cross.base);
+        
+        const crossIcon = document.createElement('div');
+        UIHelper.applyStyles(crossIcon, shouldBeSmall ? CONTENT_CONFIG.STYLES.crossIcon.small : CONTENT_CONFIG.STYLES.crossIcon.base);
+        crossIcon.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                <path d="M18 6L6 18" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M6 6L18 18" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+        cross.appendChild(crossIcon);
+        return cross;
+    }
+
+    static showSuccessState(dropdown, textContent) {
+        const successContainer = document.createElement('div');
+        UIHelper.applyStyles(successContainer, CONTENT_CONFIG.STYLES.successContainer.base);
         
         const successText = document.createElement('div');
-        successText.textContent = 'Added to Watchlist!';
+        successText.textContent = textContent;
         UIHelper.applyStyles(successText, CONTENT_CONFIG.STYLES.successText.base);
+
+        const checkmark = this.getSuccessCheckMark(false, false);
         
         successContainer.appendChild(checkmark);
         successContainer.appendChild(successText);
@@ -548,6 +690,28 @@ class LoadingUI {
         
         return successContainer;
     }
+
+    static showErrorState(dropdown, textContent) {
+        const errorContainer = document.createElement('div');
+        UIHelper.applyStyles(errorContainer, CONTENT_CONFIG.STYLES.successContainer.base);
+        
+        const errorText = document.createElement('div');
+        errorText.textContent = textContent;
+        UIHelper.applyStyles(errorText, CONTENT_CONFIG.STYLES.successText.base);
+
+        const cross = this.getErrorCross(false);
+        
+        errorContainer.appendChild(cross);
+        errorContainer.appendChild(errorText);
+        dropdown.appendChild(errorContainer);
+        
+        // Force reflow and then fade in
+        requestAnimationFrame(() => {
+            errorContainer.style.opacity = '1';
+        });
+        
+        return errorContainer;
+    }
 }
 
 class MovieResultsUI {
@@ -555,9 +719,10 @@ class MovieResultsUI {
         dropdown.innerHTML = '';
         dropdown.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
 
-        if (!data.Search && data.Title) {
-            this.renderSingleMovie(dropdown, data);
-        } else if (data.Search && data.Search?.length > 0) {
+        if (data.isSingleMovieResult) {
+            const movieDetails = data.Search[0];
+            this.renderSingleMovie(dropdown, movieDetails);
+        } else if (!data.isSingleMovieResult && data.Search.length > 0) {
             this.renderSearchResults(dropdown, data.Search);
         } else {
             this.renderNoResults(dropdown);
@@ -600,7 +765,7 @@ class MovieResultsUI {
 
         // Add button
         const addButton = document.createElement('button');
-        addButton.textContent = 'Add to Watchlist';
+        addButton.textContent = movie.isAddedToWatchlist ? 'Already in Watchlist' : 'Add to Watchlist';
         UIHelper.applyStyles(addButton, CONTENT_CONFIG.STYLES.buttons.fullViewAddToWatchlist.base);
 
         addButton.addEventListener('mouseenter', () => {
@@ -709,13 +874,23 @@ class MovieResultsUI {
         year.textContent = movie.Year;
         UIHelper.applyStyles(year, CONTENT_CONFIG.STYLES.poster.year.base);
 
+        const typeAndCheckMarkContainer = document.createElement('div');
+        UIHelper.applyStyles(typeAndCheckMarkContainer, CONTENT_CONFIG.STYLES.poster.typeAndCheckMarkContainer.base);
+
         const type = document.createElement('div');
         type.textContent = movie.Type.charAt(0).toUpperCase() + movie.Type.slice(1);
         UIHelper.applyStyles(type, CONTENT_CONFIG.STYLES.poster.type.base);
 
+        const addWatchlistCheckMark = movie.isAddedToWatchlist 
+                                        ? LoadingUI.getSuccessCheckMark(true, true)
+                                        : document.createElement('div');
+
+        typeAndCheckMarkContainer.appendChild(type);
+        typeAndCheckMarkContainer.appendChild(addWatchlistCheckMark);
+
         infoContainer.appendChild(title);
         infoContainer.appendChild(year);
-        infoContainer.appendChild(type);
+        infoContainer.appendChild(typeAndCheckMarkContainer);
 
         movieItem.appendChild(posterContainer);
         movieItem.appendChild(infoContainer);
@@ -815,7 +990,7 @@ class UIHelper {
             if (titleElement && linkElement) {
                 if (UIHelper.isElementInDOMVisible(titleElement) && CONTENT_CONFIG.SPOTLIGHT_LINKS.filter(it => url.includes(it)).length > 0) {
                     linkElement.style.position = 'relative';
-                    const imdbId = url.includes('imdb') ? url.split("/")[4] : null; // Extract the IMDb ID
+                    const imdbID = url.includes('imdb') ? url.split("/")[4] : null; // Extract the IMDb ID
                     const titleElement = result.querySelector('h3');
                     const movieName = url.includes('netflix') 
                                             ? StringHelper.cleanNetflixTitle(result.querySelector('h3').textContent)
@@ -835,7 +1010,7 @@ class UIHelper {
                     titleElement.innerHTML = '';
                     titleElement.appendChild(titleText);
 
-                    const btn = this.createAddToWatchlistBtn(movieName, null, imdbId);
+                    const btn = this.createAddToWatchlistBtn(movieName, null, imdbID);
 
                     closestDiv.appendChild(btn);
                 }
@@ -860,11 +1035,16 @@ class StringHelper {
 
 // Main Application Logic
 class WatchlistManager {
+
+    static currentDropdown = null;
+
     static async handleAddition(btn) {
         if (state.getDropdownState()) return;
 
         const movieData = this.getMovieDataFromButton(btn);
         const dropdown = DropdownUI.create(btn);
+
+        this.currentDropdown = dropdown;
         
         const data = await ContentApiService.fetchMovieDetails(
             movieData.name,
@@ -891,20 +1071,24 @@ class WatchlistManager {
         const loadingContainer = LoadingUI.showLoadingState(dropdown);
         
         try {
-            await ContentApiService.mockApiCall('', 1500);
-            await this.handleWatchlistSuccess(loadingContainer, dropdown);
+            if (!movieData.isAddedToWatchlist) {
+                await ContentApiService.addToWatchlist(movieData.imdbID);
+            }
+            await this.handleWatchlistSuccess(loadingContainer, dropdown, movieData.isAddedToWatchlist);
         } catch (error) {
-            console.error('Error:', error);
-            // Handle error state
+            if (CONTENT_CONFIG.isDevelopment) {
+                console.error('Error:', error);
+            }
+            this.handleErrorStateForDropdown(error.message || 'Error adding to Watchlist!')
         }
     }
 
-    static async handleWatchlistSuccess(loadingContainer, dropdown) {
+    static async handleWatchlistSuccess(loadingContainer, dropdown, isAlreadyInWatchlist) {
         loadingContainer.style.opacity = '0';
         await new Promise(resolve => setTimeout(resolve, 200));
         loadingContainer.remove();
         
-        const successContainer = LoadingUI.showSuccessState(dropdown);
+        const successContainer = LoadingUI.showSuccessState(dropdown, isAlreadyInWatchlist ? 'Already in Watchlist' : 'Added to Watchlist!');
         
         // Close dropdown after delay
         setTimeout(() => {
@@ -919,7 +1103,18 @@ class WatchlistManager {
         
         setTimeout(() => {
             dropdown.remove();
+            state.setDropdownState(false);
         }, 200);
+    }
+
+    static handleErrorStateForDropdown(error) {
+        if (this.currentDropdown) {
+            LoadingUI.showErrorState(this.currentDropdown, error || 'Some Error Occurred!');
+            setTimeout(() => {
+                this.closeDropdown(this.currentDropdown);
+                this.currentDropdown = null;
+            }, 1500);
+        }
     }
 }
 
@@ -934,6 +1129,12 @@ function initializeWatchlist() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === "newGetRequest" || request.type === "pageLoaded") {
         initializeWatchlist();
+        sendResponse({ received: true });
+    }
+    if (request.type === "errorOccured") {
+        setTimeout(() => {
+            WatchlistManager.handleErrorStateForDropdown(request.error || 'Some Error Occured!');
+        }, 1500);
         sendResponse({ received: true });
     }
     return true;

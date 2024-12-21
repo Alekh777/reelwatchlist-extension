@@ -3,17 +3,19 @@ const CONFIG = {
     development: {
         backendUrl: 'http://localhost:4000',
         clientId: '560576158141-lbk1674i8fs6matjg4vi8cik941h6hj1.apps.googleusercontent.com',
-        extensionId: 'ndfegimjcmepimkndlfkjmbgmccomleo'
+        extensionId: 'ndfegimjcmepimkndlfkjmbgmccomleo',
+        isDevelopment: true,
     },
     production: {
         backendUrl: 'https://reelwatchlist-backend.alekhkr.com',
         clientId: '560576158141-lbk1674i8fs6matjg4vi8cik941h6hj1.apps.googleusercontent.com',
-        extensionId: 'ndfegimjcmepimkndlfkjmbgmccomleo'
+        extensionId: 'ndfegimjcmepimkndlfkjmbgmccomleo',
+        isDevelopment: false,
     }
 };
 
 // Use development config (can be changed based on environment)
-const { backendUrl, clientId, extensionId } = CONFIG.development;
+const { backendUrl, clientId, extensionId, isDevelopment } = CONFIG.development;
 
 /* Network Request Monitoring
 This checks all the network request made and adds a listener to it, 
@@ -28,6 +30,7 @@ class NetworkMonitor {
     constructor() {
         this.tabRequestTimers = new Map();
         this.MINIMUM_TIME_BETWEEN_REQUESTS = 500; // 0.5 seconds
+        this.currentTabId = null; // Track the current tabId
     }
 
     init() {
@@ -46,6 +49,9 @@ class NetworkMonitor {
     setupTabCleanup() {
         chrome.tabs.onRemoved.addListener((tabId) => {
             this.tabRequestTimers.delete(tabId);
+            if (this.currentTabId === tabId) {
+                this.currentTabId = null; // Clear currentTabId if the tab is removed
+            }
         });
     }
 
@@ -58,6 +64,7 @@ class NetworkMonitor {
             return;
         }
 
+        this.currentTabId = tabId; // Set the current tabId
         this.tabRequestTimers.set(tabId, currentTime); // Update last request time for this tab
         await this.notifyTab(tabId, details.url, currentTime);
     }
@@ -80,8 +87,16 @@ class NetworkMonitor {
                 });
             }
         } catch (error) {
-            console.error('Error notifying tab:', error);
+            if (isDevelopment) {
+                console.error('Error notifying tab:', error);
+            }
         }
+    }
+}
+
+class PopupManager {
+    openPopup() {
+        chrome.action.openPopup();
     }
 }
 
@@ -93,15 +108,21 @@ class AuthService {
     }
 
     async signIn() {
+        await this.saveSignInStatus('SIGNIN_IN_PROGRESS');
         try {
             const authCode = await this.getAuthorizationCode();
             const tokens = await this.exchangeAuthCode(authCode);
             const userData = this.decodeJwt(tokens.idToken);
 
             await this.saveUserData(tokens, userData);
+            await this.saveSignInStatus('SIGNIN_COMPLETED');
             return { userData };
         } catch (error) {
-            console.error('Sign in failed:', error);
+            apiService.sendErrorResponse('Sign in Failed', networkMonitor.currentTabId);
+            if (isDevelopment) {
+                console.error('Sign in failed:', error);
+            }
+            await this.saveSignInStatus('SIGNIN_FAILED');
             throw error;
         }
     }
@@ -137,7 +158,7 @@ class AuthService {
     }
 
     async exchangeAuthCode(authCode) {
-        const response = await fetch(`${backendUrl}/exchange-auth-code`, {
+        const response = await fetch(`${backendUrl}/google-oauth/exchange-auth-code`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ authCode })
@@ -167,8 +188,12 @@ class AuthService {
         });
     }
 
+    async saveSignInStatus(status) {
+        await chrome.storage.local.set({ signedInStatus: status });
+    }
+
     async signOut() {
-        await chrome.storage.local.remove(["idToken", "refreshToken", "userData", "reelwatchlistJwtToken"]);
+        await chrome.storage.local.remove(["idToken", "refreshToken", "userData", "reelwatchlistJwtToken", "signedInStatus"]);
         await this.clearCookies();
     }
 
@@ -181,7 +206,10 @@ class AuthService {
             try {
                 await chrome.cookies.remove({ url: cookie.url, name: cookie.name });
             } catch (error) {
-                console.error("Error removing cookie:", error);
+                apiService.sendErrorResponse('Error Occured!', networkMonitor.currentTabId)
+                if (isDevelopment) {
+                    console.error("Error removing cookie:", error);
+                }
             }
         }
     }
@@ -198,7 +226,7 @@ class AuthService {
 
     async performTokenRefresh() {
         try {
-            const response = await fetch(`${backendUrl}/refresh-reelwatchlistJwtToken`, {
+            const response = await fetch(`${backendUrl}/jwt/refresh-token`, {
                 method: "POST",
                 credentials: "include" // include the cookies, that contains the reelwatchlistRefreshToken, send this to backend
             });
@@ -212,8 +240,11 @@ class AuthService {
             await chrome.storage.local.set({ reelwatchlistJwtToken: accessToken });
             return accessToken;
         } catch (error) {
+            apiService.sendErrorResponse('Error while login!', networkMonitor.currentTabId)
             await this.signOut();
-            console.error("Error refreshing token:", error);
+            if (isDevelopment) {
+                console.error("Error refreshing token:", error);
+            }
             return null;
         } finally {
             this.isRefreshingToken = false;
@@ -223,7 +254,7 @@ class AuthService {
 
     async refreshGoogleIdToken(refreshToken) {
         try {
-            const response = await fetch(`${backendUrl}/refresh-google-token`, {
+            const response = await fetch(`${backendUrl}/google-oauth/refresh-token`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ refreshToken })
@@ -239,7 +270,10 @@ class AuthService {
 
             return true;
         } catch (error) {
-            console.error("Failed to refresh Google token:", error);
+            apiService.sendErrorResponse('Error while login to google!', networkMonitor.currentTabId)
+            if (isDevelopment) {
+                console.error("Failed to refresh Google token:", error);
+            }
             return false;
         }
     }
@@ -255,6 +289,7 @@ class ApiService {
         const tokens = await chrome.storage.local.get(["idToken", "refreshToken", "reelwatchlistJwtToken"]);
 
         if (!this.validateTokens(tokens)) {
+            popupManager.openPopup();
             throw new Error("Authentication required. Please log in.");
         }
 
@@ -311,8 +346,26 @@ class ApiService {
 
             return response;
         } catch (error) {
-            console.error('Request failed:', error);
-            throw error;
+            if (isDevelopment) {
+                console.error('Request failed:', error);
+            }
+            throw new Error('Network Error!');
+        }
+    }
+
+    async sendErrorResponse(error, tabId) {
+        const tab = await chrome.tabs.get(tabId);
+        const timestamp = Date.now();
+        try {
+            await chrome.tabs.sendMessage(tab.id, {
+                type: "errorOccured",
+                timestamp,
+                error
+            });
+        } catch(error) {
+            if (isDevelopment) {
+                console.error('Error sending error response', error);
+            }
         }
     }
 }
@@ -321,6 +374,7 @@ class ApiService {
 const networkMonitor = new NetworkMonitor();
 const authService = new AuthService();
 const apiService = new ApiService(authService);
+const popupManager = new PopupManager();
 
 // Set up message listeners
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -342,7 +396,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         })
             .then(response => response.json())
             .then(data => sendResponse({ success: true, data }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
+            .catch(error => {
+                sendResponse({ success: false, error: error.message })
+                apiService.sendErrorResponse(error.message, networkMonitor.currentTabId);
+            });
         return true;
     }
 });

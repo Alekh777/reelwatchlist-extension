@@ -15,20 +15,24 @@
                 <button id="searchBtn">Search</button>
             </div>
     
-            <div id="results">
-                <!-- Search results will appear here -->
-            </div>
-    
             <div id="watchlist">
-                <h2>Your Watchlist</h2>
-                <ul id="watchlistItems"></ul>
+                <div class="watchlist-header">
+                    <h2 id="header-title">Your Watchlist</h2>
+                    <input id="search-watchlist" type="text" placeholder="Search in your watchlist...">
+                </div>
+                <div id="watchlistItems"></div>
             </div>
         </div>
 
         <div id="loginContainer">
             <h2>Welcome to Reel Watchlist</h2>
             <p>Sign in to manage your watchlist</p>
-            <button id="loginButton">Sign in with Google</button>
+            <button id="loginButton">
+                <div style="padding: 1px; background-color: white; display: flex; justify-content: center; align-items: center; border-radius: 50%; margin-right: 10px;">
+                    <img src="assets/images/google.png" alt="" width="24px" height="24px">
+                </div>
+                Sign in with Google
+            </button>
         </div>
 
     </div>
