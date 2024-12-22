@@ -481,7 +481,7 @@ class ContentApiService {
     }
     static async fetchMovieDetails(movieName, releaseYear, imdbID = null) {
         const params = this.buildPostBody(movieName, releaseYear, imdbID);
-        const url = `omdb-search-movie?${new URLSearchParams(params)}`;
+        const url = `search-movie?${new URLSearchParams(params)}`;
         try {
             const data = await this.fetchAuthenticated(url, 'GET');
             return data;

@@ -195,7 +195,7 @@ const POPUP_CONFIG = {
         },
         successContainer: {
             base: {
-                position: 'absolute',
+                position: 'relative',
                 top: '0',
                 left: '0',
                 width: '100%',
@@ -356,7 +356,7 @@ class PopupApiService {
     }
 
     static async searchMovies(query) {
-        return this.fetchAuthenticated(`omdb-search-movie?q=${encodeURIComponent(query)}`, 'GET');
+        return this.fetchAuthenticated(`search-movie?q=${encodeURIComponent(query)}`, 'GET');
     }
 
     static async getUserWatchlist() {
@@ -373,7 +373,6 @@ class PopupApiService {
             if (POPUP_CONFIG.isDevelopment) {
                 console.error('Error fetching movie data:', error);
             }
-            // WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
             throw error;
         }
     }
@@ -388,7 +387,6 @@ class PopupApiService {
             if (POPUP_CONFIG.isDevelopment) {
                 console.error('Error updating movie status:', error);
             }
-            // WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
             throw error;
         }
     }
@@ -403,7 +401,6 @@ class PopupApiService {
             if (POPUP_CONFIG.isDevelopment) {
                 console.error('Error updating movie status:', error);
             }
-            // WatchlistManager.handleErrorStateForDropdown(error.message || 'Error Occured!')
             throw error;
         }
     }
@@ -423,7 +420,7 @@ class PopupMovieSearchHandler {
         POPUP_CONFIG.ELEMENTS.headerTitle.prepend(backBtnContainer);
 
         if (movies.Response === "False") {
-            POPUP_CONFIG.ELEMENTS.watchlist.innerHTML = `<p>${movies.Error}</p>`;
+            PopupUIHelper.handleErrorState("Error fetching movies", POPUP_CONFIG.ELEMENTS.watchlist);
             return;
         }
 
@@ -498,7 +495,7 @@ class PopupMovieSearchHandler {
             this.displayResults(data.movieList);
         } catch (error) {
             console.error('Search error:', error);
-            POPUP_CONFIG.ELEMENTS.watchlist.innerHTML = `<p>Error searching movies: ${error.message}</p>`;
+            PopupUIHelper.handleErrorState(error?.message || "Error fetching movies", POPUP_CONFIG.ELEMENTS.watchlist);
         }
     }
 }
@@ -541,7 +538,7 @@ class PopupWatchlistManager {
             this.displayWatchlist();
         } catch (error) {
             console.error('Search error:', error);
-            POPUP_CONFIG.ELEMENTS.watchlist.innerHTML = `<p>Error loading watchlist: ${error.message}</p>`;
+            PopupUIHelper.handleErrorState(`Error loading watchlist: ${error.message}` || 'Error loading watchlist', POPUP_CONFIG.ELEMENTS.watchlist);
         }
 
     }
@@ -644,7 +641,7 @@ class PopupLoadingUI {
                     try {
                         await PopupApiService.updateStatusOfMovie(movie.imdbID, 'PLANNED');
                     } catch (error) {
-                        // Show error
+                        PopupUIHelper.handleErrorState(error.message || 'Error Occured!', checkmark);
                     } finally {
                         PopupWatchlistManager.loadWatchlist();
                     }
@@ -746,7 +743,7 @@ class PopupLoadingUI {
                 try {
                     await PopupApiService.deleteMovie(movie.imdbID);
                 } catch (error) {
-                    // Show error
+                    PopupUIHelper.handleErrorState(error.message || 'Error Occured!', cross);
                 } finally {
                     PopupWatchlistManager.loadWatchlist();
                 }   
@@ -782,7 +779,8 @@ class PopupLoadingUI {
         return successContainer;
     }
 
-    static showErrorState(dropdown, textContent) {
+    static showErrorState(container, textContent, closeError = true) {
+        container.innerHTML = '';
         const errorContainer = document.createElement('div');
         PopupUIHelper.applyStyles(errorContainer, POPUP_CONFIG.STYLES.successContainer.base);
         
@@ -794,12 +792,14 @@ class PopupLoadingUI {
         
         errorContainer.appendChild(cross);
         errorContainer.appendChild(errorText);
-        dropdown.appendChild(errorContainer);
+        container.appendChild(errorContainer);
         
-        // Force reflow and then fade in
-        requestAnimationFrame(() => {
-            errorContainer.style.opacity = '1';
-        });
+        if (closeError)  {
+            // Force reflow and then fade in
+            requestAnimationFrame(() => {
+                errorContainer.style.opacity = '1';
+            });
+        }
         
         return errorContainer;
     }
@@ -841,7 +841,7 @@ class PopupUIHelper {
         }, 200);
     }
 
-    static handleErrorStateForDropdown(error, container) {
+    static handleErrorState(error, container) {
         PopupLoadingUI.showErrorState(container, error || 'Some Error Occurred!');
     }
 
@@ -884,7 +884,7 @@ class PopupUIHelper {
                         if (POPUP_CONFIG.isDevelopment) {
                             console.error('Error:', error);
                         }
-                        this.handleErrorStateForDropdown(error.message || 'Error adding to Watchlist!', movieItem)
+                        this.handleErrorState(error.message || 'Error adding to Watchlist!', movieItem)
                     }
                 });
             }
@@ -1038,7 +1038,7 @@ document.addEventListener('DOMContentLoaded', () => {
     POPUP_CONFIG.ELEMENTS.searchBtn.addEventListener('click', () => {
         const query = POPUP_CONFIG.ELEMENTS.search.value;
         if (query) {
-            PopupMovieSearchHandler.handleSearch(query);
+            PopupMovieSearchHandler.handleSearch(query.trim());
         }
     });
 
@@ -1047,7 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter') {
             const query = POPUP_CONFIG.ELEMENTS.search.value;
             if (query) {
-                PopupMovieSearchHandler.handleSearch(query);
+                PopupMovieSearchHandler.handleSearch(query.trim());
             }
         }
     });

@@ -341,7 +341,8 @@ class ApiService {
             }
 
             if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+                const errorData = await response.json();
+                throw new Error(errorData.message);
             }
 
             return response;
@@ -349,7 +350,10 @@ class ApiService {
             if (isDevelopment) {
                 console.error('Request failed:', error);
             }
-            throw new Error('Network Error!');
+            if (error.message === 'Failed to fetch') {
+                throw new Error('Network Error!');    
+            }
+            throw new Error(error);
         }
     }
 
